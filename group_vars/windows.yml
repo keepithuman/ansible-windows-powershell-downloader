@@ -1,0 +1,17 @@
+---
+# Default configuration for Windows PowerShell script execution
+
+# Default script settings
+default_script_url: "https://raw.githubusercontent.com/keepithuman/ansible-powershell-automation/main/scripts/Manage-WindowsSystem.ps1"
+default_temp_dir: "C:\\Temp"
+default_execution_policy: "RemoteSigned"
+default_timeout: 60
+default_cleanup: true
+
+# WinRM connection settings
+ansible_winrm_connection_timeout: 60
+ansible_winrm_read_timeout: 70
+ansible_winrm_operation_timeout: 60
+
+# PowerShell settings
+ansible_powershell_execution_policy: "RemoteSigned"

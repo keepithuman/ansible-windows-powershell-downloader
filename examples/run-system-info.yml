@@ -1,0 +1,10 @@
+---
+# Example: Run system information script
+- import_playbook: ../playbooks/download-and-execute.yml
+  vars:
+    powershell_script_url: "https://raw.githubusercontent.com/keepithuman/ansible-powershell-automation/main/scripts/Manage-WindowsSystem.ps1"
+    script_dest: "C:\\Temp\\system-info.ps1"
+    ps_args:
+      - "-Action SystemInfo"
+      - "-OutputPath C:\\Reports"
+    cleanup: true

@@ -1,0 +1,11 @@
+---
+# Example: Manage Windows service
+- import_playbook: ../playbooks/download-and-execute.yml
+  vars:
+    powershell_script_url: "https://raw.githubusercontent.com/keepithuman/ansible-powershell-automation/main/scripts/Manage-WindowsSystem.ps1"
+    script_dest: "C:\\Temp\\service-management.ps1"
+    ps_args:
+      - "-Action ServiceManagement"
+      - "-ServiceName Spooler"
+      - "-ServiceAction Restart"
+    cleanup: true
