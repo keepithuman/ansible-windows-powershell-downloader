@@ -1,0 +1,100 @@
+---
+- name: Download and Execute PowerShell Script from GitHub
+  hosts: windows
+  gather_facts: no
+  vars:
+    # Configurable variables
+    script_url: "{{ powershell_script_url | default('https://raw.githubusercontent.com/keepithuman/ansible-powershell-automation/main/scripts/Manage-WindowsSystem.ps1') }}"
+    script_destination: "{{ script_dest | default('C:\\Temp\\downloaded_script.ps1') }}"
+    temp_directory: "{{ temp_dir | default('C:\\Temp') }}"
+    script_arguments: "{{ ps_args | default([]) }}"
+    execution_policy: "{{ ps_execution_policy | default('RemoteSigned') }}"
+    cleanup_after_execution: "{{ cleanup | default(true) }}"
+    download_timeout: "{{ timeout | default(60) }}"
+    
+  tasks:
+    - name: Display configuration
+      debug:
+        msg: |
+          Script URL: {{ script_url }}
+          Destination: {{ script_destination }}
+          Arguments: {{ script_arguments | join(' ') }}
+          Cleanup: {{ cleanup_after_execution }}
+    
+    - name: Ensure temporary directory exists
+      win_file:
+        path: "{{ temp_directory }}"
+        state: directory
+      register: temp_dir_creation
+      
+    - name: Download PowerShell script from GitHub
+      win_get_url:
+        url: "{{ script_url }}"
+        dest: "{{ script_destination }}"
+        timeout: "{{ download_timeout }}"
+        force: yes
+        validate_certs: no
+      register: download_result
+      
+    - name: Verify script was downloaded successfully
+      win_stat:
+        path: "{{ script_destination }}"
+      register: script_file_check
+      
+    - name: Fail if script download failed
+      fail:
+        msg: "Failed to download PowerShell script from {{ script_url }}"
+      when: not script_file_check.stat.exists
+      
+    - name: Display script information
+      debug:
+        msg: |
+          Script downloaded successfully
+          File size: {{ script_file_check.stat.size }} bytes
+          Last modified: {{ script_file_check.stat.lastwritetime }}
+          
+    - name: Build PowerShell execution command
+      set_fact:
+        ps_command: >-
+          Set-ExecutionPolicy -ExecutionPolicy {{ execution_policy }} -Scope Process -Force;
+          & "{{ script_destination }}"
+          {% if script_arguments | length > 0 %}
+          {% for arg in script_arguments %}
+          {{ arg }}
+          {% endfor %}
+          {% endif %}
+          
+    - name: Execute PowerShell script
+      win_powershell:
+        script: "{{ ps_command }}"
+      register: script_execution
+      ignore_errors: yes
+      
+    - name: Display execution results
+      debug:
+        msg: |
+          Execution Status: {{ 'Success' if script_execution.rc == 0 else 'Failed' }}
+          Return Code: {{ script_execution.rc }}
+          {% if script_execution.stdout %}
+          Output: {{ script_execution.stdout }}
+          {% endif %}
+          {% if script_execution.stderr %}
+          Error: {{ script_execution.stderr }}
+          {% endif %}
+          
+    - name: Clean up downloaded script
+      win_file:
+        path: "{{ script_destination }}"
+        state: absent
+      when: cleanup_after_execution | bool
+      register: cleanup_result
+      
+    - name: Display cleanup status
+      debug:
+        msg: "Script cleanup completed: {{ script_destination }}"
+      when: cleanup_after_execution | bool and cleanup_result.changed
+      
+    - name: Fail playbook if script execution failed
+      fail:
+        msg: "PowerShell script execution failed with return code {{ script_execution.rc }}"
+      when: script_execution.rc != 0
